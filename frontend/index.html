@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BioArchive - Yapay Zeka Destekli Biyoloji Ogrenme ve Topluluk Platformu">
+  <meta name="theme-color" content="#3AA39A">
+  <title>BioArchive - Biyoloji Ogrenme Platformu</title>
+  <link rel="icon" href="assets/logo.jpeg" type="image/jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="assets/logo.jpeg" alt="BioArchive" class="sidebar-logo">
+      <span class="sidebar-brand">BioArchive</span>
+    </div>
+
+    <button class="new-chat-btn" id="newChatBtn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Yeni Sohbet
+    </button>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Menu</div>
+      <button class="nav-item active" data-view="chat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+        AI Asistan
+      </button>
+      <button class="nav-item" data-view="community">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Topluluk
+        <span class="badge">4</span>
+      </button>
+      <button class="nav-item" data-view="saved">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        Kaydedilenler
+      </button>
+
+      <div class="nav-section-title">Gecmis</div>
+      <div id="chatHistoryList"></div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-avatar">G</div>
+      <div class="user-info">
+        <div class="user-name">Misafir</div>
+        <div class="user-status">Giris yap</div>
+      </div>
+      <button class="sidebar-action-btn" id="authBtn" title="Giris Yap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+      </button>
+      <button class="theme-toggle-btn" onclick="toggleTheme()">
+        <span class="theme-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ============ MOBILE HEADER ============ -->
+  <header class="mobile-header">
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+    </button>
+    <img src="assets/logo.jpeg" alt="" class="mobile-header-logo">
+    <span class="mobile-header-title">BioArchive AI</span>
+    <button class="mobile-theme-btn theme-toggle-btn" onclick="toggleTheme()">
+      <span class="theme-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </span>
+    </button>
+  </header>
+
+  <!-- ============ MAIN CONTENT ============ -->
+  <main class="main-content">
+
+    <!-- ======= CHAT VIEW ======= -->
+    <section class="view active" id="chatView">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <h2>BioArchive AI</h2>
+          <span class="chat-model-badge">Bio Model v2</span>
+        </div>
+        <div class="chat-header-actions">
+          <button class="chat-header-btn" title="Sohbeti temizle" onclick="State.messages=[];State.currentConversationId=null;saveToStorage();renderChatMessages();">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-messages-inner" id="chatMessagesInner">
+          <div class="chat-welcome" id="chatWelcome">
+            <img src="assets/logo.jpeg" alt="BioArchive" class="welcome-logo">
+            <h1>Merhaba! Ben BioArchive AI</h1>
+            <p>Biyoloji, arastirma ve daha fazlasi hakkinda sorularinizi yanitlayabilirim. Nasil yardimci olabilirim?</p>
+            <div class="suggested-prompts">
+              <button class="prompt-chip">DNA replikasyonu nasil calisir?</button>
+              <button class="prompt-chip">Fotosentez surecini detayli acikla</button>
+              <button class="prompt-chip">Hucre zarinin yapisini anlat</button>
+              <button class="prompt-chip">Evrim teorisinin temel ilkeleri nelerdir?</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-wrapper">
+        <div class="chat-input-container">
+          <div class="upload-preview" id="uploadPreview">
+            <img class="upload-preview-img" src="" alt="">
+            <div class="upload-preview-info">
+              <div class="upload-preview-name"></div>
+              <div class="upload-preview-size"></div>
+            </div>
+            <button class="upload-preview-remove" onclick="clearUploadPreview()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+          <div class="action-menu" id="actionMenu">
+            <button class="action-menu-item" data-action="flashcard">
+              <div class="action-menu-icon flashcard">&#x1F4DA;</div>
+              <div class="action-menu-text">
+                <strong>Flash Kartlar</strong>
+                <small>Calisma kartlari</small>
+              </div>
+            </button>
+            <button class="action-menu-item" data-action="pdf">
+              <div class="action-menu-icon pdf">&#x1F4C4;</div>
+              <div class="action-menu-text">
+                <strong>PDF Ozetle</strong>
+                <small>Belge analizi</small>
+              </div>
+            </button>
+            <button class="action-menu-item" data-action="video">
+              <div class="action-menu-icon video">&#x1F3AC;</div>
+              <div class="action-menu-text">
+                <strong>Video Ozetle</strong>
+                <small>Video icerik analizi</small>
+              </div>
+            </button>
+            <button class="action-menu-item" data-action="image">
+              <div class="action-menu-icon image">&#x1F4F7;</div>
+              <div class="action-menu-text">
+                <strong>Gorsel Yukle</strong>
+                <small>Ekran goruntusu / foto</small>
+              </div>
+            </button>
+          </div>
+          <div class="input-box">
+            <button class="plus-btn" id="plusBtn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <textarea class="chat-textarea" id="chatInput" placeholder="Mesajinizi yazin..." rows="1"></textarea>
+            <button class="send-btn" id="sendBtn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <input type="file" id="fileInput" class="hidden-file-input" accept="image/*">
+        </div>
+      </div>
+    </section>
+
+    <!-- ======= COMMUNITY VIEW ======= -->
+    <section class="view" id="communityView">
+      <div class="community-header">
+        <div class="community-header-left">
+          <h2>Topluluk</h2>
+          <div class="community-tabs">
+            <button class="community-tab active" data-filter="all">Tumu</button>
+            <button class="community-tab" data-filter="article">Makale</button>
+            <button class="community-tab" data-filter="research">Arastirma</button>
+            <button class="community-tab" data-filter="question">Soru</button>
+          </div>
+        </div>
+        <button class="create-post-btn" onclick="openCreatePostModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+          Paylasim Yap
+        </button>
+      </div>
+      <div class="community-feed">
+        <div class="feed-inner" id="postsContainer"></div>
+      </div>
+    </section>
+
+    <!-- ======= POST DETAIL VIEW ======= -->
+    <section class="view" id="postDetailView">
+      <div class="post-detail-header">
+        <button class="post-detail-back" id="postDetailBack">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Geri
+        </button>
+        <span class="post-detail-header-title">Paylasim</span>
+        <div style="width:70px"></div>
+      </div>
+      <div class="post-detail-scroll">
+        <div class="post-detail-inner" id="postDetailContent"></div>
+      </div>
+    </section>
+
+    <!-- ======= SAVED VIEW ======= -->
+    <section class="view" id="savedView">
+      <div class="saved-header">
+        <h2>Kaydedilenler</h2>
+      </div>
+      <div class="saved-content">
+        <div class="saved-inner" id="savedContent"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ MOBILE BOTTOM NAV ============ -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="mobile-tab active" data-view="chat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+        Chat
+      </button>
+      <button class="mobile-tab" data-view="community">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Topluluk
+      </button>
+      <button class="mobile-tab" data-view="saved">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        Kayitli
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============ MODALS ============ -->
+
+  <!-- Auth Modal -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-target="loginForm">Giris Yap</button>
+          <button class="auth-tab" data-target="registerForm">Kayit Ol</button>
+        </div>
+        <button class="modal-close" onclick="closeAllModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Giris Formu -->
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label class="form-label">Kullanici Adi veya E-posta</label>
+            <input type="text" class="form-input" id="loginInput" placeholder="ornek@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sifre</label>
+            <input type="password" class="form-input" id="loginPasswordInput" placeholder="Sifrenizi girin" required>
+          </div>
+          <button type="submit" class="btn-primary btn-full">Giris Yap</button>
+        </form>
+        <!-- Kayit Formu -->
+        <form id="registerForm" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Kullanici Adi</label>
+            <input type="text" class="form-input" id="registerUsername" placeholder="kullanici_adi" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ad Soyad</label>
+            <input type="text" class="form-input" id="registerDisplayName" placeholder="Adiniz Soyadiniz" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-posta</label>
+            <input type="email" class="form-input" id="registerEmail" placeholder="ornek@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sifre</label>
+            <input type="password" class="form-input" id="registerPassword" placeholder="En az 6 karakter" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sifre Tekrar</label>
+            <input type="password" class="form-input" id="registerPasswordConfirm" placeholder="Sifrenizi tekrar girin" required>
+          </div>
+          <button type="submit" class="btn-primary btn-full">Kayit Ol</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Post Modal -->
+  <div class="modal-backdrop" id="createPostModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Yeni Paylasim</h3>
+        <button class="modal-close" onclick="closeAllModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="createPostForm" onsubmit="event.preventDefault()">
+          <div class="form-group">
+            <label class="form-label">Baslik</label>
+            <input type="text" class="form-input" id="postTitleInput" placeholder="Paylasiminiza bir baslik verin...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Icerik</label>
+            <textarea class="form-textarea" id="postBodyInput" placeholder="Dusuncelerinizi paylasin..." rows="5"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kategori</label>
+            <select class="form-select" id="postCategorySelect">
+              <option value="article">Makale</option>
+              <option value="research">Arastirma</option>
+              <option value="note">Not</option>
+              <option value="question">Soru</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Etiketler</label>
+            <div class="form-tags-input" id="postTagsContainer">
+              <input type="text" class="form-tag-input" id="postTagInput" placeholder="Etiket ekle...">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeAllModals()">Iptal</button>
+        <button class="btn-primary" onclick="submitPost()">Paylas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flash Card Modal -->
+  <div class="modal-backdrop" id="flashCardModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Flash Kartlar</h3>
+        <button class="modal-close" onclick="closeAllModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="fc-topic-tabs">
+          <button class="fc-tab active" data-topic="biyoloji" onclick="selectFlashCardTopic('biyoloji')">Genel Biyoloji</button>
+          <button class="fc-tab" data-topic="genetik" onclick="selectFlashCardTopic('genetik')">Genetik</button>
+        </div>
+        <div id="flashCardContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Modal -->
+  <div class="modal-backdrop" id="pdfModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>PDF Ozetle</h3>
+        <button class="modal-close" onclick="closeAllModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">PDF Linki veya Dosya Adi</label>
+          <input type="text" class="form-input" id="pdfUrlInput" placeholder="https://ornek.com/belge.pdf">
+        </div>
+        <p style="font-size:0.8125rem;color:var(--text-tertiary);line-height:1.5;">PDF dosyanizin linkini yapistirin. AI modelimiz belgeyi analiz edecek ve sizin icin ozet olusturacak.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeAllModals()">Iptal</button>
+        <button class="btn-primary" onclick="simulatePdfSummary()">Ozetle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Modal -->
+  <div class="modal-backdrop" id="videoModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Video Ozetle</h3>
+        <button class="modal-close" onclick="closeAllModals()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Video Linki</label>
+          <input type="text" class="form-input" id="videoUrlInput" placeholder="https://youtube.com/watch?v=...">
+        </div>
+        <p style="font-size:0.8125rem;color:var(--text-tertiary);line-height:1.5;">YouTube veya diger video platformlarindaki videonun linkini yapistirin.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeAllModals()">Iptal</button>
+        <button class="btn-primary" onclick="simulateVideoSummary()">Ozetle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TOAST CONTAINER ============ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ============ SCRIPTS (Moduler) ============ -->
+  <script src="js/config.js"></script>
+  <script src="js/components/icons.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/utils.js"></script>
+  <script src="js/components/auth.js"></script>
+  <script src="js/components/chat.js"></script>
+  <script src="js/components/community.js"></script>
+  <script src="js/components/modals.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

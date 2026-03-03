@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+vds/api/node_modules/
+
+# Environment
+.env
+vds/api/.env
+vds/docker/.env
+
+# Build
+dist/
+build/
+
+# Uploads
+vds/api/uploads/*
+!vds/api/uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Firebase (eski)
+.firebase/
+.firebaserc
+
+# Docker
+vds/docker/postgres_data/
+
+# Temp
+*.tmp
+*.bak
+ea788578-*.jpeg

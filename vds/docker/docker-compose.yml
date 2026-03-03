@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # ---- PostgreSQL Veritabani ----
+  db:
+    image: postgres:16-alpine
+    container_name: bioarchive-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bioarchive
+      POSTGRES_USER: bioarchive_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bioarchive_secret_2024}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../api/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ../api/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bioarchive_user -d bioarchive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bioarchive-net
+
+  # ---- Backend API ----
+  api:
+    build:
+      context: ..
+      dockerfile: vds/docker/Dockerfile.api
+    container_name: bioarchive-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: bioarchive
+      DB_USER: bioarchive_user
+      DB_PASSWORD: ${DB_PASSWORD:-bioarchive_secret_2024}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-minimum-32-chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-too-minimum-32-chars}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CORS_ORIGIN: https://bioarchive.com.tr,https://www.bioarchive.com.tr
+    volumes:
+      - api_uploads:/app/uploads
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - bioarchive-net
+
+  # ---- Frontend (Nginx) ----
+  frontend:
+    build:
+      context: ..
+      dockerfile: vds/docker/Dockerfile.frontend
+    container_name: bioarchive-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - bioarchive-net
+
+volumes:
+  postgres_data:
+    driver: local
+  api_uploads:
+    driver: local
+
+networks:
+  bioarchive-net:
+    driver: bridge

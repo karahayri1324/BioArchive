@@ -1,0 +1,26 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Guvenlik: non-root kullanici
+RUN addgroup -g 1001 -S bioarchive && \
+    adduser -S bioarchive -u 1001 -G bioarchive
+
+# Bagimliliklari yukle
+COPY api/package.json api/package-lock.json* ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Uygulama kodunu kopyala
+COPY api/ .
+
+# Uploads dizini
+RUN mkdir -p uploads && chown -R bioarchive:bioarchive /app
+
+USER bioarchive
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+CMD ["node", "src/index.js"]
