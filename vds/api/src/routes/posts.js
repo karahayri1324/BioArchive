@@ -1,6 +1,6 @@
 const express = require('express');
-const { body, param, query: checkQuery, validationResult } = require('express-validator');
-const { query } = require('../models/db');
+const { body, validationResult } = require('express-validator');
+const { query, pool } = require('../models/db');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -8,8 +8,11 @@ const router = express.Router();
 // GET /api/posts - Paylasimlari listele
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const { category, page = 1, limit = 20, sort = 'newest' } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const category = req.query.category;
+    const sort = req.query.sort;
+    const offset = (page - 1) * limit;
 
     let whereClause = 'WHERE 1=1';
     const params = [];
@@ -23,7 +26,20 @@ router.get('/', optionalAuth, async (req, res, next) => {
 
     const orderBy = sort === 'popular' ? 'p.likes_count DESC' : 'p.created_at DESC';
 
-    params.push(parseInt(limit), offset);
+    // Kullanici parametresi
+    let userFields = ', false as liked, false as bookmarked';
+    if (req.user) {
+      params.push(req.user.id);
+      userFields = `,
+              EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${paramIndex}) as liked,
+              EXISTS(SELECT 1 FROM bookmarks b WHERE b.post_id = p.id AND b.user_id = $${paramIndex}) as bookmarked`;
+      paramIndex++;
+    }
+
+    // Limit ve offset
+    const limitIdx = paramIndex;
+    const offsetIdx = paramIndex + 1;
+    params.push(limit, offset);
 
     const result = await query(
       `SELECT p.id, p.title, p.body, p.category, p.tags, p.likes_count,
@@ -31,22 +47,21 @@ router.get('/', optionalAuth, async (req, res, next) => {
               u.id as author_id, u.username as author_username,
               u.display_name as author_name, u.avatar_color as author_color,
               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count
-              ${req.user ? `,
-              EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ${paramIndex + 2}) as liked,
-              EXISTS(SELECT 1 FROM bookmarks b WHERE b.post_id = p.id AND b.user_id = ${paramIndex + 2}) as bookmarked`
-              : ', false as liked, false as bookmarked'}
+              ${userFields}
        FROM posts p
        JOIN users u ON p.author_id = u.id
        ${whereClause}
        ORDER BY ${orderBy}
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      req.user ? [...params, req.user.id] : params
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      params
     );
 
     const countResult = await query(
       `SELECT COUNT(*) FROM posts p ${whereClause}`,
       category && category !== 'all' ? [category] : []
     );
+
+    const total = parseInt(countResult.rows[0].count);
 
     res.json({
       posts: result.rows.map(p => ({
@@ -69,10 +84,10 @@ router.get('/', optionalAuth, async (req, res, next) => {
         },
       })),
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: parseInt(countResult.rows[0].count),
-        totalPages: Math.ceil(parseInt(countResult.rows[0].count) / parseInt(limit)),
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (err) {
@@ -83,6 +98,11 @@ router.get('/', optionalAuth, async (req, res, next) => {
 // GET /api/posts/:id - Tek paylasim getir
 router.get('/:id', optionalAuth, async (req, res, next) => {
   try {
+    const postId = parseInt(req.params.id);
+    if (!Number.isFinite(postId) || postId < 1) {
+      return res.status(400).json({ error: 'Gecersiz paylasim ID.' });
+    }
+
     const result = await query(
       `SELECT p.id, p.title, p.body, p.category, p.tags, p.likes_count,
               p.created_at, p.updated_at,
@@ -95,7 +115,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
        FROM posts p
        JOIN users u ON p.author_id = u.id
        WHERE p.id = $1`,
-      req.user ? [req.params.id, req.user.id] : [req.params.id]
+      req.user ? [postId, req.user.id] : [postId]
     );
 
     if (result.rows.length === 0) {
@@ -111,7 +131,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
        JOIN users u ON c.author_id = u.id
        WHERE c.post_id = $1
        ORDER BY c.created_at ASC`,
-      [req.params.id]
+      [postId]
     );
 
     const p = result.rows[0];
@@ -260,33 +280,52 @@ router.delete('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-// POST /api/posts/:id/like - Begeni toggle
+// POST /api/posts/:id/like - Begeni toggle (transaction ile)
 router.post('/:id/like', authenticate, async (req, res, next) => {
+  const client = await pool.connect();
   try {
-    const existing = await query(
+    await client.query('BEGIN');
+
+    // Post var mi kontrol et
+    const postCheck = await client.query('SELECT id FROM posts WHERE id = $1', [req.params.id]);
+    if (postCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Paylasim bulunamadi.' });
+    }
+
+    const existing = await client.query(
       'SELECT id FROM post_likes WHERE post_id = $1 AND user_id = $2',
       [req.params.id, req.user.id]
     );
 
     if (existing.rows.length > 0) {
-      // Begeniyi kaldir
-      await query('DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-      await query('UPDATE posts SET likes_count = likes_count - 1 WHERE id = $1', [req.params.id]);
+      await client.query('DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+      await client.query('UPDATE posts SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = $1', [req.params.id]);
+      await client.query('COMMIT');
       res.json({ liked: false });
     } else {
-      // Begen
-      await query('INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
-      await query('UPDATE posts SET likes_count = likes_count + 1 WHERE id = $1', [req.params.id]);
+      await client.query('INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
+      await client.query('UPDATE posts SET likes_count = likes_count + 1 WHERE id = $1', [req.params.id]);
+      await client.query('COMMIT');
       res.json({ liked: true });
     }
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 });
 
 // POST /api/posts/:id/bookmark - Kaydet toggle
 router.post('/:id/bookmark', authenticate, async (req, res, next) => {
   try {
+    // Post var mi kontrol et
+    const postCheck = await query('SELECT id FROM posts WHERE id = $1', [req.params.id]);
+    if (postCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Paylasim bulunamadi.' });
+    }
+
     const existing = await query(
       'SELECT id FROM bookmarks WHERE post_id = $1 AND user_id = $2',
       [req.params.id, req.user.id]

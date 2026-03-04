@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { query } = require('../models/db');
+const { query, pool } = require('../models/db');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -10,7 +10,8 @@ router.get('/', optionalAuth, async (req, res, next) => {
   try {
     const { topic } = req.query;
 
-    let whereClause = 'WHERE fs.is_public = true';
+    // WHERE clause'u dogru oncelik ile olustur (OR/AND precedence fix)
+    let whereClause = 'WHERE (fs.is_public = true';
     const params = [];
     let paramIndex = 1;
 
@@ -19,6 +20,8 @@ router.get('/', optionalAuth, async (req, res, next) => {
       params.push(req.user.id);
       paramIndex++;
     }
+
+    whereClause += ')'; // Parantezi kapat
 
     if (topic) {
       whereClause += ` AND fs.topic = $${paramIndex}`;
@@ -47,9 +50,14 @@ router.get('/', optionalAuth, async (req, res, next) => {
 // GET /api/flashcards/:setId/cards - Bir setin kartlarini getir
 router.get('/:setId/cards', optionalAuth, async (req, res, next) => {
   try {
+    const setId = parseInt(req.params.setId);
+    if (!Number.isFinite(setId) || setId < 1) {
+      return res.status(400).json({ error: 'Gecersiz set ID.' });
+    }
+
     const set = await query(
       'SELECT id, title, topic, is_public, created_by FROM flashcard_sets WHERE id = $1',
-      [req.params.setId]
+      [setId]
     );
 
     if (set.rows.length === 0) {
@@ -65,7 +73,7 @@ router.get('/:setId/cards', optionalAuth, async (req, res, next) => {
       `SELECT id, front, back, sort_order FROM flashcards
        WHERE set_id = $1
        ORDER BY sort_order ASC`,
-      [req.params.setId]
+      [setId]
     );
 
     res.json({
@@ -77,7 +85,7 @@ router.get('/:setId/cards', optionalAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/flashcards - Yeni flash kart seti olustur
+// POST /api/flashcards - Yeni flash kart seti olustur (transaction ile)
 router.post('/', authenticate, [
   body('title').trim().isLength({ min: 2, max: 100 }),
   body('topic').trim().isLength({ min: 2, max: 50 }),
@@ -87,15 +95,19 @@ router.post('/', authenticate, [
   body('cards.*.front').trim().isLength({ min: 1, max: 500 }),
   body('cards.*.back').trim().isLength({ min: 1, max: 1000 }),
 ], async (req, res, next) => {
+  const client = await pool.connect();
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      client.release();
       return res.status(400).json({ error: 'Gecersiz veri.', details: errors.array() });
     }
 
     const { title, topic, description, isPublic = true, cards } = req.body;
 
-    const setResult = await query(
+    await client.query('BEGIN');
+
+    const setResult = await client.query(
       `INSERT INTO flashcard_sets (title, topic, description, is_public, created_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
@@ -104,20 +116,33 @@ router.post('/', authenticate, [
 
     const setId = setResult.rows[0].id;
 
-    // Kartlari ekle
-    for (let i = 0; i < cards.length; i++) {
-      await query(
-        `INSERT INTO flashcards (set_id, front, back, sort_order) VALUES ($1, $2, $3, $4)`,
-        [setId, cards[i].front, cards[i].back, i]
+    // Kartlari toplu olarak ekle (batch insert)
+    if (cards.length > 0) {
+      const values = [];
+      const insertParams = [];
+      for (let i = 0; i < cards.length; i++) {
+        const base = i * 4;
+        values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
+        insertParams.push(setId, cards[i].front, cards[i].back, i);
+      }
+
+      await client.query(
+        `INSERT INTO flashcards (set_id, front, back, sort_order) VALUES ${values.join(', ')}`,
+        insertParams
       );
     }
+
+    await client.query('COMMIT');
 
     res.status(201).json({
       message: 'Flash kart seti olusturuldu!',
       setId,
     });
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 });
 

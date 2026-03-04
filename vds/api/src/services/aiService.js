@@ -19,27 +19,45 @@ Uzmanlik alanlarin:
 
 Her zaman bilimsel kaynaklara dayali, dogru bilgi ver. Emin olmadigin konularda bunu belirt.`;
 
+// Singleton AI client'lari (her istekte yeniden olusturulmasin)
+let openaiClient = null;
+let anthropicClient = null;
+
+function getOpenAIClient() {
+  if (!openaiClient) {
+    const OpenAI = require('openai');
+    openaiClient = new OpenAI({ apiKey: config.ai.openai.apiKey });
+  }
+  return openaiClient;
+}
+
+function getAnthropicClient() {
+  if (!anthropicClient) {
+    const Anthropic = require('@anthropic-ai/sdk');
+    anthropicClient = new Anthropic({ apiKey: config.ai.anthropic.apiKey });
+  }
+  return anthropicClient;
+}
+
 async function generateResponse(message, conversationHistory) {
   const provider = config.ai.provider;
 
   try {
-    if (provider === 'openai') {
+    if (provider === 'openai' && config.ai.openai.apiKey) {
       return await generateOpenAI(message, conversationHistory);
-    } else if (provider === 'anthropic') {
+    } else if (provider === 'anthropic' && config.ai.anthropic.apiKey) {
       return await generateAnthropic(message, conversationHistory);
     } else {
       return generateFallback(message);
     }
   } catch (err) {
     console.error('[AI] Hata:', err.message);
-    // Fallback - yerel yanit ver
     return generateFallback(message);
   }
 }
 
 async function generateOpenAI(message, history) {
-  const OpenAI = require('openai');
-  const client = new OpenAI({ apiKey: config.ai.openai.apiKey });
+  const client = getOpenAIClient();
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -57,8 +75,7 @@ async function generateOpenAI(message, history) {
 }
 
 async function generateAnthropic(message, history) {
-  const Anthropic = require('@anthropic-ai/sdk');
-  const client = new Anthropic({ apiKey: config.ai.anthropic.apiKey });
+  const client = getAnthropicClient();
 
   const messages = history.map(m => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',

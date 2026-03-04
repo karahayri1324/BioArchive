@@ -54,8 +54,8 @@ function renderFlashCard() {
   container.innerHTML = `
     <div class="flashcard-container">
       <div class="flashcard" id="currentFlashCard" onclick="this.classList.toggle('flipped')">
-        <div class="flashcard-face flashcard-front">${card.front}</div>
-        <div class="flashcard-face flashcard-back">${card.back}</div>
+        <div class="flashcard-face flashcard-front">${escapeHtml(card.front)}</div>
+        <div class="flashcard-face flashcard-back">${escapeHtml(card.back)}</div>
       </div>
     </div>
     <div class="flashcard-nav">

@@ -93,8 +93,13 @@ async function handleRegister(e) {
     return;
   }
 
-  if (password.length < 6) {
-    showToast('Sifre en az 6 karakter olmalidir');
+  if (password.length < 8) {
+    showToast('Sifre en az 8 karakter olmalidir');
+    return;
+  }
+
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    showToast('Sifre buyuk harf, kucuk harf ve rakam icermelidir');
     return;
   }
 

@@ -264,7 +264,7 @@ function renderChatHistories() {
   let html = '';
   histories.forEach(ch => {
     html += `
-      <button class="chat-history-item" onclick="loadChatHistory('${ch.id}')">
+      <button class="chat-history-item" onclick="loadChatHistory('${escapeHtml(String(ch.id))}')">
         ${Icons.msgCircle}
         <span>${escapeHtml(ch.title)}</span>
       </button>`;
@@ -311,6 +311,11 @@ function handleFileUpload(e) {
 
   if (file.size > Config.MAX_FILE_SIZE) {
     showToast('Dosya boyutu 10MB\'dan kucuk olmalidir');
+    return;
+  }
+
+  if (!Config.ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    showToast('Sadece JPEG, PNG, GIF ve WebP dosyalari desteklenir');
     return;
   }
 

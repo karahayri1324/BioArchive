@@ -20,7 +20,11 @@ function generateTokens(userId) {
 router.post('/register', authLimiter, [
   body('username').trim().isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_]+$/),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6, max: 128 }),
+  body('password')
+    .isLength({ min: 8, max: 128 })
+    .withMessage('Sifre en az 8 karakter olmalidir.')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Sifre en az bir buyuk harf, bir kucuk harf ve bir rakam icermelidir.'),
   body('displayName').trim().isLength({ min: 2, max: 50 }),
 ], async (req, res, next) => {
   try {
@@ -124,7 +128,7 @@ router.post('/login', authLimiter, [
 });
 
 // POST /api/auth/refresh - Token yenile
-router.post('/refresh', [
+router.post('/refresh', authLimiter, [
   body('refreshToken').notEmpty(),
 ], async (req, res, next) => {
   try {

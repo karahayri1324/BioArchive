@@ -1,4 +1,17 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Bagimliliklari yukle (build asamasi)
+COPY api/package.json api/package-lock.json* ./
+RUN npm ci --only=production && npm cache clean --force
+
+# ---- Production image ----
 FROM node:20-alpine
+
+# Guvenlik: doas/sudo yoksa daha guvenli, gereksiz paketleri kaldir
+RUN apk --no-cache add wget && \
+    rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -6,21 +19,25 @@ WORKDIR /app
 RUN addgroup -g 1001 -S bioarchive && \
     adduser -S bioarchive -u 1001 -G bioarchive
 
-# Bagimliliklari yukle
-COPY api/package.json api/package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+# Builder'dan node_modules'u kopyala
+COPY --from=builder /app/node_modules ./node_modules
 
 # Uygulama kodunu kopyala
-COPY api/ .
+COPY api/package.json ./
+COPY api/src/ ./src/
+COPY api/database/ ./database/
 
 # Uploads dizini
 RUN mkdir -p uploads && chown -R bioarchive:bioarchive /app
+
+# Ortam degiskenleri
+ENV NODE_ENV=production
 
 USER bioarchive
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 CMD ["node", "src/index.js"]
