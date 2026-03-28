@@ -27,22 +27,125 @@ function escapeHtml(str) {
 // ---- Markdown -> HTML ----
 function formatMarkdown(text) {
   if (!text) return '';
-  let html = escapeHtml(text);
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-  html = html.replace(/^- (.*)/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-  html = html.replace(/^\d+\. (.*)/gm, '<li>$1</li>');
-  html = html.split('\n\n').map(p => {
-    p = p.trim();
-    if (!p) return '';
-    if (p.startsWith('<')) return p;
-    return `<p>${p}</p>`;
-  }).join('');
-  html = html.replace(/([^>])\n([^<])/g, '$1<br>$2');
+
+  const lines = text.split('\n');
+  let html = '';
+  let inTable = false;
+  let inUl = false;
+  let inOl = false;
+  let inCode = false;
+  let codeBlock = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Code block
+    if (line.trim().startsWith('```')) {
+      if (inCode) {
+        html += '<pre><code>' + escapeHtml(codeBlock.trim()) + '</code></pre>';
+        codeBlock = '';
+        inCode = false;
+      } else {
+        if (inUl) { html += '</ul>'; inUl = false; }
+        if (inOl) { html += '</ol>'; inOl = false; }
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) { codeBlock += line + '\n'; continue; }
+
+    // Table rows
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      // Separator row
+      if (/^\|[\s\-:|]+\|$/.test(line.trim())) continue;
+      const cells = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
+      if (!inTable) {
+        inTable = true;
+        html += '<table><thead><tr>' + cells.map(c => '<th>' + inlineFormat(c) + '</th>').join('') + '</tr></thead><tbody>';
+      } else {
+        html += '<tr>' + cells.map(c => '<td>' + inlineFormat(c) + '</td>').join('') + '</tr>';
+      }
+      continue;
+    } else if (inTable) {
+      html += '</tbody></table>';
+      inTable = false;
+    }
+
+    // Blank line
+    if (line.trim() === '') {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      continue;
+    }
+
+    // Headers
+    if (line.startsWith('### ')) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      html += '<h4>' + inlineFormat(line.slice(4)) + '</h4>';
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      html += '<h3>' + inlineFormat(line.slice(3)) + '</h3>';
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      html += '<h2>' + inlineFormat(line.slice(2)) + '</h2>';
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+      html += '<hr>';
+      continue;
+    }
+
+    // Unordered list
+    if (/^[\s]*[-*] /.test(line)) {
+      if (inOl) { html += '</ol>'; inOl = false; }
+      if (!inUl) { html += '<ul>'; inUl = true; }
+      html += '<li>' + inlineFormat(line.replace(/^[\s]*[-*] /, '')) + '</li>';
+      continue;
+    }
+
+    // Ordered list
+    if (/^[\s]*\d+\. /.test(line)) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (!inOl) { html += '<ol>'; inOl = true; }
+      html += '<li>' + inlineFormat(line.replace(/^[\s]*\d+\. /, '')) + '</li>';
+      continue;
+    }
+
+    // Normal paragraph
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+    html += '<p>' + inlineFormat(line) + '</p>';
+  }
+
+  if (inUl) html += '</ul>';
+  if (inOl) html += '</ol>';
+  if (inTable) html += '</tbody></table>';
+  if (inCode) html += '<pre><code>' + escapeHtml(codeBlock.trim()) + '</code></pre>';
+
   return html;
+}
+
+function inlineFormat(text) {
+  let s = escapeHtml(text);
+  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  s = s.replace(/`(.*?)`/g, '<code>$1</code>');
+  // Links: [text](url)
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
 }
 
 // ---- Dosya Boyutu Formatlama ----
